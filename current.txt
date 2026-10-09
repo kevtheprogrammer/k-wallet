@@ -1,0 +1,18 @@
+source .venv/bin/activate
+uv run main.py
+
+uv run alembic init migrations
+uv run alembic revision --autogenerate -m "update user and account models" //make migrations
+uv run alembic upgrade head //apply migrations
+uv run alembic current //check status
+
+-----------------------------------
+# 1. Change your SQLAlchemy models
+
+# 2. Generate a migration
+uv run alembic revision --autogenerate -m "describe your changes"
+
+# 3. Review the generated migration
+
+# 4. Apply it
+uv run alembic upgrade head

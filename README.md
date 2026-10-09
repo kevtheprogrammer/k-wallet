@@ -1,7 +1,7 @@
 # k-wallet
- This is a banking core system that runs on Python
- It App can run as CLI
- It has most banking functions
+ This is a banking core system that runs on Python.
+ It's a CLI banking app,
+ it has most banking functions
  Feel free to contribute
 
  
@@ -13,4 +13,8 @@
 # Databsae
  set up database
  run "pip install sqlalchemy"
+
+# Features
+
+ 1. User Creation
 

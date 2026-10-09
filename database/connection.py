@@ -1,9 +1,21 @@
-import sqlite3
-from pathlib import Path
+from sqlalchemy import create_engine
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
-DATABASE_PATH = Path(__file__).resolve().parents[2] / "data" / "db.sqlite"
+DATABASE_URL = "sqlite:///./k_wallet.db"
+
+engine = create_engine(
+    DATABASE_URL,
+    echo=True
+)
 
 
-def get_connection():
-    return sqlite3.connect(DATABASE_PATH)
+class Base(DeclarativeBase):
+    pass
+
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False
+)

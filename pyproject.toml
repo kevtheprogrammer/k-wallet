@@ -1,0 +1,23 @@
+[project]
+name = "k-money"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "kevtheprogrammer", email = "kevtheprogrammer16@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "alembic>=1.20.0",
+    "bcrypt>=5.0.0",
+    "pillow>=12.3.0",
+    "requests>=2.34.2",
+    "sqlalchemy>=2.1.4",
+]
+
+[project.scripts]
+k-money = "k_money:main"
+
+[build-system]
+requires = ["uv_build>=0.12.24,<0.13.0"]
+build-backend = "uv_build"
