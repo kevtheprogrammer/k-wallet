@@ -1,0 +1,6 @@
+
+
+current.txt
+__pycache__/
+migrations/
+**.db
