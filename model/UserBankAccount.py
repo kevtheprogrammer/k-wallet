@@ -1,4 +1,10 @@
+from decimal import Decimal, InvalidOperation
+from datetime import datetime, timezone
 
+from sqlalchemy import select
+from database.connection import SessionLocal
+from database.models import Account, Transaction, User
+import bcrypt
 
 class Bank():
     
@@ -40,6 +46,74 @@ class UserBankAccount():
         print(
             f"Bank Name:\t{cls.BANK_NAME}\nCurrency:\t{cls.BASE_CURRENCY}\nMax Balance:\t{cls.MAX_BALANCE}"
         )
+    
+    def get_user_by_phone(phone: str):
+        with SessionLocal() as session:
+            user = session.scalar(
+                select(User).where(User.phone == phone)
+            )
+
+            if user is None:
+                return None
+            
+            acc = session.scalar(
+                select(Account).where(Account.user_id==user.id)
+            )
+
+            if acc is None:
+                return {'error': f"Account for user {user.first_name} {user.last_name} was not found."}
+            
+            return {
+                "id": user.id,
+                "first_name": user.first_name,
+                "last_name": user.last_name,
+                "names": f"{user.first_name} {user.last_name}",
+                "phone": user.phone,
+                "email": user.email,
+                "nrc": user.nrc,
+                "address": user.address, 
+                "account_id":acc.id,
+                "account_number": acc.account_number,
+                "balance": acc.balance,
+            }
+
+ 
+    @staticmethod
+    def authenticate_user(phone: str, pin: str):
+        try:
+            with SessionLocal() as session:
+                user = session.scalar(
+                    select(User).where(User.phone == phone)
+                )
+
+                if user is None:
+                    return {
+                        "error": "User not found. Please check your phone number."
+                    }
+
+                # Verify the entered PIN against the stored bcrypt hash
+                if not bcrypt.checkpw(
+                    pin.encode("utf-8"),
+                    user.pin_hash.encode("utf-8")
+                    if isinstance(user.pin_hash, str)
+                    else user.pin_hash
+                ):
+                    return {
+                        "error": "Incorrect PIN. Please try again."
+                    }
+
+                return {
+                    "user_id": user.id,
+                    "names": f"{user.first_name} {user.last_name}",
+                    "phone": user.phone,
+                }
+
+        except Exception as e:
+            print(f"Authentication error: {e}")
+            return {
+                "error": "Authentication failed due to a system error."
+            }
+
          
     @staticmethod
     def validate_amount(amount):
@@ -81,11 +155,11 @@ class UserBankAccount():
                 return fee
             
     
-    def get_sending_fee(self,amount:float)->float:
+    def get_sending_fee(self,amount:Decimal)->float:
         return (amount*.6)/100
     
-    def deposit(self, amount:float) -> bool:
-        amount = float(amount)
+    def deposit(self, amount:Decimal) -> bool:
+        amount = self._to_money(amount)
 
         if not self.validate_amount(amount):
             print('Unable to complete transaction. Amount can not be negative')
@@ -100,79 +174,198 @@ class UserBankAccount():
             f"You have deposited {self.BASE_CURRENCY}{amount} into account number {self.account_number} {self.names}. You new balance is {self.balance}"
         )
         return False
-
-    def withdraw(self, amount:float, commission:str)->bool:
-        amount = float(amount)
-        if not self.validate_amount(amount):
-                print('Unable to complete transaction. Amount can not be negative')
-                return False
-            
-        fee = self.get_withdraw_charge(amount)
-        total = amount + fee
-         
-        
-        if total > self.balance:
-            print('Unable to complete transaction - Insufficient balance.')
-            return False
-        
-        self._balance -= total
-        commission._balance += fee 
-        print(
-            f"You have withdrawn {self.BASE_CURRENCY}{amount:.2f} "
-            f"from account {self.account_number}."
-        )
-
-        print(f"Withdrawal fee: {self.BASE_CURRENCY}{fee:.2f}")
-        print(f"Total deducted: {self.BASE_CURRENCY}{total:.2f}")
-        print(f"New balance: {self.BASE_CURRENCY}{self.balance:.2f}")
-         
-        return True
-    
-    def send(self,amount:float, receiver:str, commission:str)->bool:
-        amount = float(amount)
-        fee = self.get_sending_fee(amount)
-        total = amount + fee
-        
-        if not self.validate_amount(amount):
-            print('Unable to complete transaction. Amount can not be negative')
-            return False
-
-        if total > self.balance:
-            print('Transaction failed: Insufficient account balance!')
-            return False
-        
-        if receiver.balance + amount > receiver.MAX_BALANCE:
-            print('Unable to complete transaction. Reiver has reached thier limit')
-            return False
-        self.balance -= total
-        receiver.balance += amount
-        
-        commission.balance += fee
-        
-        print(
-            f"K{amount:.2f} sent from "
-            f"{self.names} to {receiver.names}"
-        )
-
-        print(f"{self.names} balance: { self.balance}") 
-        print(f"{receiver.names} balance: {receiver.balance}")
-        return True
-     
-     
-
-k_money = Bank()
-kelvin = UserBankAccount('975550955','Kelvin Banda' )
-matildah = UserBankAccount('771806932', 'Matildah Banda')
-# matildah.MAX_BALANCE = 20
-k_money_sending_account = UserBankAccount('001','Commission Send')
-k_money_withdraw_account = UserBankAccount('002','Commission Withdraw')
-
-k_money.add_user_account([kelvin, matildah, k_money_sending_account, k_money_withdraw_account])
  
-kelvin.deposit(10000)
-kelvin.send(7500, matildah, k_money_sending_account)
+    @staticmethod
+    def _to_money(amount) -> Decimal:
+        try:
+            value = Decimal(str(amount))
+        except (InvalidOperation, ValueError, TypeError):
+            raise ValueError("Enter a valid amount.")
 
-matildah.withdraw(5500, k_money_withdraw_account)
+        if not value.is_finite() or value <= Decimal("0.00"):
+            raise ValueError("Amount must be greater than zero.")
+
+        if value != value.quantize(Decimal("0.01")):
+            raise ValueError("Amount cannot have more than 2 decimal places.")
+
+        return value
+
+    @classmethod
+    def _get_account(cls, session, account_number):
+        account = session.scalar(
+            select(Account).where(
+                Account.account_number == account_number
+            )
+        )
+
+        if account is None:
+            raise ValueError(f"Account {account_number} was not found.")
+
+        if account.status != "ACTIVE":
+            raise ValueError(f"Account {account_number} is not active.")
+
+        return account
+
+    @staticmethod
+    def _record_transaction(session, account, amount, transaction_type):
+        transaction = Transaction(
+            account_id=account.id,
+            amount=amount,
+            transaction_type=transaction_type,
+        )
+        session.add(transaction)
+
+    def withdraw(self, amount, commission_account_number) -> bool:
+        try:
+            amount = self._to_money(amount)
+
+            # Your existing withdrawal fee schedule
+            fee = Decimal(
+                str(self.get_withdraw_charge(float(amount)))
+            )
+            total = amount + fee
+
+            with SessionLocal.begin() as session:
+                account = self._get_account(
+                    session, self.account_number
+                )
+                commission = self._get_account(
+                    session, commission_account_number
+                )
+
+                if account.id == commission.id:
+                    raise ValueError(
+                        "Your account cannot be the commission account."
+                    )
+
+                balance = Decimal(str(account.balance))
+
+                if total > balance:
+                    raise ValueError("Insufficient balance.")
+
+                account.balance = balance - total
+                commission.balance = (
+                    Decimal(str(commission.balance)) + fee
+                )
+
+                self._record_transaction(
+                    session, account, amount, "WITHDRAWAL"
+                )
+                self._record_transaction(
+                    session, account, fee, "WITHDRAWAL_FEE"
+                )
+                self._record_transaction(
+                    session, commission, fee, "COMMISSION_RECEIVED"
+                )
+
+                new_balance = account.balance
+
+            self._balance = float(new_balance)
+
+            print(f"Withdrawn: ZMW {amount:.2f}")
+            print(f"Fee:       ZMW {fee:.2f}")
+            print(f"Total:     ZMW {total:.2f}")
+            print(f"Balance:   ZMW {new_balance:.2f}")
+
+            return True
+
+        except (ValueError, InvalidOperation) as error:
+            print(f"Withdrawal failed: {error}")
+            return False
+
+    def send(
+        self,
+        amount,
+        receiver_account_number,
+        commission_account_number,
+    ) -> bool:
+        try:
+            amount = self._to_money(amount)
+            fee = self.get_sending_fee(amount)  
+            fee = fee.quantize(Decimal("0.01"))
+            total = amount + fee
+
+            with SessionLocal.begin() as session:
+                sender = self._get_account(
+                    session, self.account_number
+                )
+                receiver = self._get_account(
+                    session, receiver_account_number
+                )
+                commission = self._get_account(
+                    session, commission_account_number
+                )
+
+                if sender.id == receiver.id:
+                    raise ValueError(
+                        "You cannot send money to the same account."
+                    )
+
+                if sender.id == commission.id:
+                    raise ValueError(
+                        "Sender cannot be the commission account."
+                    )
+
+                if receiver.id == commission.id:
+                    raise ValueError(
+                        "Receiver cannot be the commission account."
+                    )
+
+                sender_balance = Decimal(str(sender.balance))
+                receiver_balance = Decimal(str(receiver.balance))
+                commission_balance = Decimal(
+                    str(commission.balance)
+                )
+
+                if total > sender_balance:
+                    raise ValueError("Insufficient balance.")
+
+                if (
+                    receiver_balance + amount
+                    > Decimal(str(receiver.MAX_BALANCE))
+                    if hasattr(receiver, "MAX_BALANCE")
+                    else receiver_balance + amount > Decimal("10000.00")
+                ):
+                    raise ValueError(
+                        "Receiver has reached the account balance limit."
+                    )
+
+                sender.balance = sender_balance - total
+                receiver.balance = receiver_balance + amount
+                commission.balance = commission_balance + fee
+
+                self._record_transaction(
+                    session, sender, amount, "TRANSFER_SENT"
+                )
+                self._record_transaction(
+                    session, sender, fee, "TRANSFER_FEE"
+                )
+                self._record_transaction(
+                    session, receiver, amount, "TRANSFER_RECEIVED"
+                )
+                self._record_transaction(
+                    session, commission, fee, "COMMISSION_RECEIVED"
+                )
+
+                new_balance = sender.balance
+                receiver_balance_after = receiver.balance
+
+            self._balance = float(new_balance)
+
+            print(f"Sent:      ZMW {amount:.2f}")
+            print(f"Fee:       ZMW {fee:.2f}")
+            print(f"Total:     ZMW {total:.2f}")
+            print(f"Your balance: ZMW {new_balance:.2f}")
+            print(
+                f"Receiver balance: ZMW {receiver_balance_after:.2f}"
+            )
+
+            return True
+
+        except (ValueError, InvalidOperation) as error:
+            print(f"Transfer failed: {error}")
+            return False
 
 
-k_money.list_accounts()
+ 
+ 

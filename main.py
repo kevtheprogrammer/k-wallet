@@ -3,7 +3,9 @@ from getpass import getpass
 from database.connection import Base, engine
 from database.models import *
 from services.user_services import register_user
+from model.UserBankAccount import UserBankAccount
 
+from services.auth_services import login
 
 def initialize_database():
     Base.metadata.create_all(bind=engine)
@@ -70,34 +72,44 @@ def account_management():
 
 
 def send_money():
-    amount = float(input("Enter amount to send: \t"))
-    if amount <= 0:
-        print("Invalid amount. Please enter a positive number.")
-    else:
-        print(f"Sending ZMW {amount}...")
-        user_id = input("Enter recipient's number: ")
-        if not user_id.isdigit():
-            print("Invalid recipient number. Please enter a valid number.")
-        else:
-            print(f"Successfully sent ZMW {amount} to user ID {user_id}.")
+    sender = UserBankAccount.get_user_by_phone(phone="0975550955")
+    receiver = UserBankAccount.get_user_by_phone(phone="0760851983")
+    print("Sender:", sender)
+    print("Receiver:", receiver)
+    # if sender:
+    #     print("Sender:", sender["names"])
+    #     print("Sender account:", sender["account_number"])
+    # else:
+    #     print("Sender not found.")
 
-    return 
+    # if receiver:
+    #     print("Receiver:", receiver["names"])
+    #     print("Receiver account:", receiver["account_number"])
+    # else:
+    #     print("Receiver not found.") 
+    
+    if sender and receiver:
+        wallet = UserBankAccount(
+            account_number=sender["account_number"],
+            names=sender["names"],
+            balance=sender["balance"],
+        )
 
-def menu(key):
+        wallet.send(
+            amount=100,
+            receiver_account_number=receiver["account_number"],
+            commission_account_number="9000000001",
+        )
+
+
+
+
+def auth_call(key):
     match key:
         case '1':
             onboard_user()
         case '2':
-            account_management()
-        case '3':
-            send_money()
-        case '4':
-            print("coming soon!")
-        case '5':
-            print("coming soon!")
-        case '6':       
-            print("Thank you for using our services. See you next time!")
-            exit()
+            login()
         case _:
             print("Invalid option. Please try again.")
 
@@ -107,16 +119,11 @@ if __name__ == "__main__":
     print("\n**** K-Wallet Customer Onboarding ****\n")
     print("\n**************************************\n")
     print("1. Register a new customer")
-    print("2. Account Management")
-    print("3. Send Money")
-    print("4. Withdraw Money")
-    print("5. Pay Bills")
-    print("6. Exit\n\n")
-    
+    print("2. Login") 
+    print("0. Exit\n\n")
     
     # menu 
     val = input('input:\t')
-    menu(val)
+    auth_call(val)
     
-    
-    onboard_user()
+   
