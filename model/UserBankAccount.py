@@ -1,27 +1,13 @@
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 from database.connection import SessionLocal
 from database.models import Account, Transaction, User
 import bcrypt
+from contextvars import ContextVar
+from services.user_session import session_user
 
-class Bank():
-    
-    def __init__(self):
-        self.user_accounts = []
-        
-    def add_user_account(self,accounts:list)->bool:
-        for acc in accounts:
-            self.user_accounts.append(acc)
-            print(f'added user account {acc.names}')
-        return True
-        
-    def list_accounts(self):
-        for acc in self.user_accounts:
-            print(f"{acc.names}({acc._account_number})==> {acc.balance}")
-        return True
-    
 class UserBankAccount():
 
     MAX_BALANCE = 10000.00 
@@ -77,7 +63,6 @@ class UserBankAccount():
                 "balance": acc.balance,
             }
 
- 
     @staticmethod
     def authenticate_user(phone: str, pin: str):
         try:
@@ -101,6 +86,21 @@ class UserBankAccount():
                     return {
                         "error": "Incorrect PIN. Please try again."
                     }
+                  
+                acc = session.scalar( select(Account).where(Account.user_id==user.id))
+                
+                if acc is None:
+                    return  
+                
+                # if successful login
+                session_user.set({
+                    "id": user.id,
+                    "names": f"{user.first_name} {user.last_name}",
+                    "phone": user.phone,
+                    "account_id":acc.id,
+                    "account_number":acc.account_number,
+                    "balance": acc.balance,
+                })
 
                 return {
                     "user_id": user.id,
@@ -113,23 +113,14 @@ class UserBankAccount():
             return {
                 "error": "Authentication failed due to a system error."
             }
-
-         
-    @staticmethod
-    def validate_amount(amount):
-        try:
-            amount = float(amount)
-        except ValueError:
-            return False
-        return amount > 0 
-    
+  
     @property
-    def balance(self):
+    def balance(self) -> Decimal:
         return self._balance
      
     @balance.setter
-    def balance(self, amount):
-        amount = float(amount)
+    def balance(self, amount) -> bool:
+        amount = Decimal(amount)
         
         if  amount < 0:
             raise ValueError('Value amount can not be negative')
@@ -144,37 +135,7 @@ class UserBankAccount():
     @property
     def names(self):
         return self._names
-    
-    @property
-    def account_number(self):
-        return self._account_number
-    
-    def get_withdraw_charge(self, amount:float)->float:
-        for limit, fee in self.WITHDRAWAL_FEES:
-            if amount <= limit:
-                return fee
-            
-    
-    def get_sending_fee(self,amount:Decimal)->float:
-        return (amount*.6)/100
-    
-    def deposit(self, amount:Decimal) -> bool:
-        amount = self._to_money(amount)
 
-        if not self.validate_amount(amount):
-            print('Unable to complete transaction. Amount can not be negative')
-            return False
-
-
-        if self.balance + amount > self.MAX_BALANCE:
-            raise ValueError("Deposit exceeds account limit")
-    
-        self._balance += amount
-        print(
-            f"You have deposited {self.BASE_CURRENCY}{amount} into account number {self.account_number} {self.names}. You new balance is {self.balance}"
-        )
-        return False
- 
     @staticmethod
     def _to_money(amount) -> Decimal:
         try:
@@ -214,6 +175,73 @@ class UserBankAccount():
             transaction_type=transaction_type,
         )
         session.add(transaction)
+
+    @property
+    def account_number(self):
+        return self._account_number
+    
+    def get_withdraw_charge(self, amount:float)->float:
+        for limit, fee in self.WITHDRAWAL_FEES:
+            if amount <= limit:
+                return fee
+            
+    def get_sending_fee(self, amount: Decimal) -> Decimal:
+        fee = (amount * Decimal("0.6")) / Decimal("100")
+        return fee.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        
+    def deposit(self, amount: Decimal, account_id: int) -> bool:
+        amount = self._to_money(amount)
+
+        if not amount:
+            print("Unable to complete transaction. Amount must be positive.")
+            return False
+
+        try:
+            with SessionLocal.begin() as session:
+                acc = session.scalar(
+                    select(Account)
+                    .where(Account.id == account_id)
+                    .with_for_update()
+                )
+
+                if acc is None:
+                    print("Account not found.")
+                    return False
+
+                current_balance = Decimal(str(acc.balance))
+
+                if current_balance + amount > Decimal(str(self.MAX_BALANCE)):
+                    print("Deposit exceeds account limit.")
+                    return False
+
+                # Update the database balance
+                acc.balance = current_balance + amount
+                
+                self._record_transaction(
+                    session=session,
+                    account=acc,
+                    amount=amount,
+                    transaction_type="DEPOSIT",
+                )
+
+
+            # Update the in-memory wallet balance
+            self._balance = acc.balance
+                
+            
+                
+
+            print(
+                f"You have deposited ZMW {amount:.2f} "
+                f"into account {self.account_number} ({self.names}). "
+                f"Your new balance is ZMW {self._balance:.2f}."
+            )
+
+            return True
+
+        except Exception as e:
+            print(f"Deposit failed: {e}")
+            return False
 
     def withdraw(self, amount, commission_account_number) -> bool:
         try:
@@ -348,18 +376,14 @@ class UserBankAccount():
                 )
 
                 new_balance = sender.balance
-                receiver_balance_after = receiver.balance
+                # receiver_balance_after = receiver.balance
 
             self._balance = float(new_balance)
-
-            print(f"Sent:      ZMW {amount:.2f}")
-            print(f"Fee:       ZMW {fee:.2f}")
-            print(f"Total:     ZMW {total:.2f}")
+            print('receiver user---:', receiver)
+            # print(f"Sent ZMW {am
+            # ount:.2f} to {receiver.user.first_name} {receiver.user.first_name} at a Fee  ZMW {fee:.2f}")
             print(f"Your balance: ZMW {new_balance:.2f}")
-            print(
-                f"Receiver balance: ZMW {receiver_balance_after:.2f}"
-            )
-
+          
             return True
 
         except (ValueError, InvalidOperation) as error:

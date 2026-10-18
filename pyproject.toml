@@ -10,6 +10,7 @@ requires-python = ">=3.14"
 dependencies = [
     "alembic>=1.20.0",
     "bcrypt>=5.0.0",
+    "contextvars>=2.4",
     "pillow>=12.3.0",
     "requests>=2.34.2",
     "sqlalchemy>=2.1.4",

@@ -17,4 +17,7 @@
 # Features
 
  1. User Creation
+ 2. User Authentication
+ 3. Send Money
+ 
 

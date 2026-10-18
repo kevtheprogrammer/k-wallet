@@ -7,7 +7,7 @@ from sqlalchemy import (
     Numeric,
     DateTime,
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from database.connection import Base
 
@@ -33,6 +33,8 @@ class User(Base):
 
     # Store the hash, never the original PIN.
     pin_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    
+    accounts = relationship("Account", back_populates="user")
 
 
 class Account(Base):
@@ -60,6 +62,8 @@ class Account(Base):
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+    
+    user = relationship("User", back_populates="accounts")
 
 
 class Transaction(Base):

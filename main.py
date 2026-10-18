@@ -1,3 +1,4 @@
+from contextvars import ContextVar
 from getpass import getpass
 
 from database.connection import Base, engine
@@ -51,55 +52,24 @@ def onboard_user():
         # Log the actual exception securely during development.
 
 
-def account_management():
-    print("1. Change PIN")
-    print("2. Account Balance")
-    print("3. Transaction History")
-    print("4. Delete Account")
-    key = input("Select an option: ")
+# def account_management():
+#     print("1. Change PIN")
+#     print("2. Account Balance")
+#     print("3. Transaction History")
+#     print("4. Delete Account")
+#     key = input("Select an option: ")
     
-    match key:
-        case '1':
-            print("Change PIN functionality coming soon!")
-        case '2':
-            print("Account Balance functionality coming soon!")
-        case '3':
-            print("Transaction History functionality coming soon!")
-        case '4':   
-            print("Delete Account functionality coming soon!")
-        case _:
-            print("Invalid option. Please try again.")
-
-
-def send_money():
-    sender = UserBankAccount.get_user_by_phone(phone="0975550955")
-    receiver = UserBankAccount.get_user_by_phone(phone="0760851983")
-    print("Sender:", sender)
-    print("Receiver:", receiver)
-    # if sender:
-    #     print("Sender:", sender["names"])
-    #     print("Sender account:", sender["account_number"])
-    # else:
-    #     print("Sender not found.")
-
-    # if receiver:
-    #     print("Receiver:", receiver["names"])
-    #     print("Receiver account:", receiver["account_number"])
-    # else:
-    #     print("Receiver not found.") 
-    
-    if sender and receiver:
-        wallet = UserBankAccount(
-            account_number=sender["account_number"],
-            names=sender["names"],
-            balance=sender["balance"],
-        )
-
-        wallet.send(
-            amount=100,
-            receiver_account_number=receiver["account_number"],
-            commission_account_number="9000000001",
-        )
+#     match key:
+#         case '1':
+#             print("Change PIN functionality coming soon!")
+#         case '2':
+#             print("Account Balance functionality coming soon!")
+#         case '3':
+#             print("Transaction History functionality coming soon!")
+#         case '4':   
+#             print("Delete Account functionality coming soon!")
+#         case _:
+#             print("Invalid option. Please try again.")
 
 
 
@@ -110,6 +80,7 @@ def auth_call(key):
             onboard_user()
         case '2':
             login()
+            auth_call(key)
         case _:
             print("Invalid option. Please try again.")
 

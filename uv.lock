@@ -171,6 +171,15 @@ wheels = [
 ]
 
 [[package]]
+name = "contextvars"
+version = "2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "immutables" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/83/96/55b82d9f13763be9d672622e1b8106c85acb83edd7cc2fa5bc67cd9877e9/contextvars-2.4.tar.gz", hash = "sha256:f38c908aaa59c14335eeea12abea5f443646216c4e29380d7bf34d2018e2c39e", size = 9570, upload-time = "2019-04-01T14:42:11.953Z" }
+
+[[package]]
 name = "idna"
 version = "3.20"
 source = { registry = "https://pypi.org/simple" }
@@ -180,12 +189,19 @@ wheels = [
 ]
 
 [[package]]
+name = "immutables"
+version = "0.21"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/69/41/0ccaa6ef9943c0609ec5aa663a3b3e681c1712c1007147b84590cec706a0/immutables-0.21.tar.gz", hash = "sha256:b55ffaf0449790242feb4c56ab799ea7af92801a0a43f9e2f4f8af2ab24dfc4a", size = 89008, upload-time = "2024-10-10T00:55:01.434Z" }
+
+[[package]]
 name = "k-money"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "bcrypt" },
+    { name = "contextvars" },
     { name = "pillow" },
     { name = "requests" },
     { name = "sqlalchemy" },
@@ -195,6 +211,7 @@ dependencies = [
 requires-dist = [
     { name = "alembic", specifier = ">=1.20.0" },
     { name = "bcrypt", specifier = ">=5.0.0" },
+    { name = "contextvars", specifier = ">=2.4" },
     { name = "pillow", specifier = ">=12.3.0" },
     { name = "requests", specifier = ">=2.34.2" },
     { name = "sqlalchemy", specifier = ">=2.1.4" },
