@@ -3,7 +3,7 @@
  It's a CLI banking app,
  it has most banking functions
  Feel free to contribute
-
+ on respective branches i.e v1, v2, v3..
  
 # Environment
  use UV to set up env
