@@ -320,6 +320,12 @@ class UserBankAccount():
                 receiver = self._get_account(
                     session, receiver_account_number
                 )
+                receiver_user = session.get(User, receiver.user_id)
+                receiver_name = (
+                    f"{receiver_user.first_name} {receiver_user.last_name}"
+                    if receiver_user
+                    else "Unknown recipient"
+                )
                 commission = self._get_account(
                     session, commission_account_number
                 )
@@ -379,9 +385,8 @@ class UserBankAccount():
                 # receiver_balance_after = receiver.balance
 
             self._balance = float(new_balance)
-            print('receiver user---:', receiver)
-            # print(f"Sent ZMW {am
-            # ount:.2f} to {receiver.user.first_name} {receiver.user.first_name} at a Fee  ZMW {fee:.2f}")
+            # print('receiver user---:', receiver)
+            print(f"Sent ZMW {amount:.2f} to {receiver_name} at a Fee  ZMW {fee:.2f}. ")
             print(f"Your balance: ZMW {new_balance:.2f}")
           
             return True
@@ -389,7 +394,5 @@ class UserBankAccount():
         except (ValueError, InvalidOperation) as error:
             print(f"Transfer failed: {error}")
             return False
-
-
  
  

@@ -19,5 +19,8 @@
  1. User Creation
  2. User Authentication
  3. Send Money
+ 4. Deposit Money
+ 5. Balance Inquiry
+ 6. Withdraw
  
 

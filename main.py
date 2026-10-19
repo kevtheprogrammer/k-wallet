@@ -50,30 +50,7 @@ def onboard_user():
     except Exception:
         print("\nRegistration failed due to a database or system error.")
         # Log the actual exception securely during development.
-
-
-# def account_management():
-#     print("1. Change PIN")
-#     print("2. Account Balance")
-#     print("3. Transaction History")
-#     print("4. Delete Account")
-#     key = input("Select an option: ")
-    
-#     match key:
-#         case '1':
-#             print("Change PIN functionality coming soon!")
-#         case '2':
-#             print("Account Balance functionality coming soon!")
-#         case '3':
-#             print("Transaction History functionality coming soon!")
-#         case '4':   
-#             print("Delete Account functionality coming soon!")
-#         case _:
-#             print("Invalid option. Please try again.")
-
-
-
-
+ 
 def auth_call(key):
     match key:
         case '1':

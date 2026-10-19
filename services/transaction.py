@@ -21,9 +21,7 @@ def deposit_money():
     print(f"Deposit successful! New balance: ZMW {wallet.balance:.2f}")
 
 def send_money(): 
-    
     sender = session_user.get()
-    
     if not sender:
         print("Error: No sender information available.")
         return
@@ -37,7 +35,6 @@ def send_money():
     
     amount_ = input('Enter Amount: ')
     
-    
     if sender and receiver:
         wallet = UserBankAccount(
             account_number=sender["account_number"],
@@ -50,3 +47,32 @@ def send_money():
             receiver_account_number=receiver["account_number"],
             commission_account_number="2074468656",
         )
+
+def check_balance():
+    # choose account number
+    user = session_user.get()
+    key = input(f"1. {user['account_number']}\nb. Main Menu\n")
+    if key == '1':
+        print(f'{user['account_number']} account Balance is ZMW 1{user['balance']}')
+        # v2 will need to create a new check balance method on UserBankAccount    
+    else:
+        return
+    
+def withdraw_money():
+    user = session_user.get()
+    amount = input('Enter amount to withdraw: \n')
+    
+    if not user:
+        print("Error: No sender information available.")
+        return 
+    
+    wallet = UserBankAccount(
+        account_number=user["account_number"],
+        names=user["names"],
+        balance=user["balance"],
+    )
+    wallet.withdraw(
+        amount=amount,
+        commission_account_number='2074468656'
+    )
+    
