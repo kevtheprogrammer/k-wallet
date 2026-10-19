@@ -19,7 +19,6 @@ def hash_pin(pin: str) -> str:
         bcrypt.gensalt()
     ).decode("utf-8")
 
-
 def generate_account_number(session) -> str:
     while True:
         number = str(secrets.randbelow(9_000_000_000) + 1_000_000_000)
@@ -32,7 +31,6 @@ def generate_account_number(session) -> str:
 
         if existing is None:
             return number
-
 
 def register_user(
     first_name: str,
